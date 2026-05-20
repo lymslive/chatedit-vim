@@ -46,7 +46,7 @@ function! s:RunChat(line1, line2, mode) abort
     let l:cmd = g:chatedit_cmd . ' ' . l:opts . ' ' . shellescape(l:infile)
 
     " ---- Run ----
-    let l:output    = systemlist(l:cmd)
+    let l:output    = systemlist(l:cmd . ' 2>&1')
     let l:exit_code = v:shell_error
 
     if l:tmpfile !=# ''
@@ -57,6 +57,9 @@ function! s:RunChat(line1, line2, mode) abort
         echohl ErrorMsg
         echomsg 'chatedit: ' . g:chatedit_cmd . ' exited with code ' . l:exit_code
         echohl None
+        if !empty(l:output)
+            call append(line('$'), l:output)
+        endif
         return
     endif
 
