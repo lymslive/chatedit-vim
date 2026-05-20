@@ -6,6 +6,9 @@
 "   :'<,'>AI     Send selection as chat, insert response below
 "   :AR          Send whole buffer in simple mode, replace with response
 "   :'<,'>AR     Send selection in simple mode, replace with response
+"
+" Requires Vim 8+ with +job for async mode (autoload/chatedit.vim).
+" Falls back to synchronous execution on Vim 7 or without +job.
 
 if exists('g:loaded_chatedit')
     finish
@@ -17,10 +20,13 @@ if !exists('g:chatedit_cmd')
     let g:chatedit_cmd = 'ai-chat.pl'
 endif
 
+" ---------------------------------------------------------------------------
+" Sync fallback (Vim 7 / no +job)
+" ---------------------------------------------------------------------------
+
 " s:RunChat(line1, line2, mode)
-"   line1, line2 : line range (from command -range=%)
-"   mode         : 'chat' for :AI (full chat parsing + --reformat)
-"                  'simple' for :AR (--simple + --reformat)
+"   Synchronous implementation kept for compatibility with Vim < 8 or
+"   environments without the +job feature.
 function! s:RunChat(line1, line2, mode) abort
     let l:total  = line('$')
     let l:is_whole = (a:line1 == 1 && a:line2 == l:total)
@@ -74,10 +80,16 @@ function! s:RunChat(line1, line2, mode) abort
     endif
 endfunction
 
-" :AI [range]  -- full chat parse, append response to end of buffer
-" Default range is % (whole file); visual selection sends selection only
-command! -range=% AI call s:RunChat(<line1>, <line2>, 'chat')
+" ---------------------------------------------------------------------------
+" Commands -- use async autoload path when Vim 8 + job is available
+" ---------------------------------------------------------------------------
 
-" :AR [range]  -- simple mode, replace range with response
-" Default range is % (whole file); visual selection replaces selection
-command! -range=% AR call s:RunChat(<line1>, <line2>, 'simple')
+if has('job') && exists('*job_start')
+    " Vim 8+: async streaming via autoload/chatedit.vim
+    command! -range=% AI call chatedit#RunChat(<line1>, <line2>, 'chat')
+    command! -range=% AR call chatedit#RunChat(<line1>, <line2>, 'simple')
+else
+    " Vim 7 compat: synchronous fallback
+    command! -range=% AI call s:RunChat(<line1>, <line2>, 'chat')
+    command! -range=% AR call s:RunChat(<line1>, <line2>, 'simple')
+endif
