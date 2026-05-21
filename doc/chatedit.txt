@@ -1,0 +1,171 @@
+*chatedit.txt*  Vim plugin for chatedit — AI chat via Markdown files
+
+Author:  lymslive
+Repo:    https://github.com/lymslive/chatedit-vim
+Version: 1.0
+
+==============================================================================
+CONTENTS                                                   *chatedit-contents*
+
+    1. Introduction ............. |chatedit-introduction|
+    2. Requirements ............. |chatedit-requirements|
+    3. Installation ............. |chatedit-installation|
+    4. Configuration ............ |chatedit-configuration|
+    5. Commands ................. |chatedit-commands|
+    6. Abbreviations ............ |chatedit-abbreviations|
+    7. Mappings ................. |chatedit-mappings|
+    8. Chat Format .............. |chatedit-format|
+    9. Changelog ................ |chatedit-changelog|
+
+==============================================================================
+1. INTRODUCTION                                        *chatedit-introduction*
+
+chatedit-vim integrates `ai-chat.pl` with Vim so you can send Markdown chat
+files to an AI model API without leaving the editor.
+
+The workflow:
+  - Write a conversation in a Markdown file using `## role >>` headings.
+  - Run |:AI| to send the conversation and stream the reply into the buffer.
+  - Edit the history freely, then run |:AI| again for the next turn.
+
+See https://github.com/lymslive/chatedit for the full toolkit (includes the
+`ai-chat.pl` Perl script and `ai-curl.sh` Bash wrapper).
+
+==============================================================================
+2. REQUIREMENTS                                        *chatedit-requirements*
+
+  - Vim 8.0+ with `+job` feature (for async / streaming mode)
+  - Vim 7 or no `+job`: automatic synchronous fallback
+  - `ai-chat.pl` on `$PATH` (or configure |g:chatedit_cmd|)
+
+==============================================================================
+3. INSTALLATION                                        *chatedit-installation*
+
+Vim 8+ native packages: >
+
+    mkdir -p ~/.vim/pack/chatedit/start
+
+    " Option A: symlink from the chatedit repo submodule
+    ln -s /path/to/chatedit/vim ~/.vim/pack/chatedit/start/chatedit
+
+    " Option B: clone the plugin repo standalone
+    git clone https://github.com/lymslive/chatedit-vim \
+        ~/.vim/pack/chatedit/start/chatedit
+<
+
+After installation, run `:helptags ~/.vim/pack/chatedit/start/chatedit/doc`
+to register the help tags.
+
+==============================================================================
+4. CONFIGURATION                                      *chatedit-configuration*
+
+                                                           *g:chatedit_cmd*
+g:chatedit_cmd ~
+    Path or name of the `ai-chat.pl` command.
+    Default: `'ai-chat.pl'` >
+
+        let g:chatedit_cmd = 'ai-chat.pl'
+<
+    Override if the script is installed under a different name or path: >
+
+        let g:chatedit_cmd = '/usr/local/bin/ai-chat.pl'
+<
+                                                       *g:chatedit_version*
+g:chatedit_version ~
+    Read-only string set to the current plugin version. >
+
+        echo g:chatedit_version   " prints: 1.0
+<
+
+==============================================================================
+5. COMMANDS                                               *chatedit-commands*
+
+All commands require `ai-chat.pl` to be installed and a valid API env file
+configured (see `ai-chat.pl --help` for env file search order).
+
+On Vim 8+ with `+job` the commands run **asynchronously**: the editor stays
+responsive while `ai-chat.pl` calls the API and output streams into the
+buffer line by line.  On Vim 7 / no `+job` they fall back to synchronous
+execution.
+
+                                                                       *:AI*
+:[range]AI
+    Without a range (or whole-buffer range): save the current buffer, then
+    call `ai-chat.pl --stream --reformat 1` on the file.  The streaming
+    reply is appended to the end of the buffer.
+
+    With a visual range `'<,'>`: write the selected lines to a temp file,
+    call `ai-chat.pl --stream --reformat 1`, and stream the reply into the
+    buffer immediately after the selection.
+
+                                                                       *:AR*
+:[range]AR
+    Without a range: save the current buffer, then call
+    `ai-chat.pl --simple --stream --reformat 1`.  The buffer content is
+    replaced with the streamed reply (simple / single-turn mode).
+
+    With a visual range `'<,'>`: write the selection to a temp file, call
+    with `--simple --stream --reformat 1`, and replace the selection with
+    the reply.
+
+==============================================================================
+6. ABBREVIATIONS                                      *chatedit-abbreviations*
+
+These insert-mode abbreviations are active in `.md` (Markdown) files only:
+
+    #s    expands to    ## system >>
+    #u    expands to    ## user >>
+    #a    expands to    ## assistant >>
+
+They provide quick entry of the conversation-segment headings understood by
+`ai-chat.pl`.  See |chatedit-format| for the full Markdown format spec.
+
+==============================================================================
+7. MAPPINGS                                               *chatedit-mappings*
+
+Normal-mode mappings active in `.md` files on heading lines (`# …`):
+
+    >>    Increase heading level — prepend one `#` (max `######`)
+    <<    Decrease heading level — remove one `#` (min `#`)
+
+On non-heading lines the default `>>` (indent) / `<<` (unindent) behaviour
+is preserved.
+
+==============================================================================
+8. CHAT FORMAT                                             *chatedit-format*
+
+A conversation file is a Markdown file where each turn starts with a
+level-2 heading: >
+
+    ## role >>
+<
+Recognised roles: `system`, `user`, `assistant` (or abbreviations `P`, `Q`,
+`A`).  Text after `>>` on the same line is part of the message: >
+
+    ## user >> Hello, who are you?
+
+    ## assistant >>
+
+    I am an AI assistant.
+<
+Other rules:
+  - Lines starting with `# ` (level-1 heading) are comments — not sent to
+    the API.
+  - A `##` heading that does not match `role >>` ends the current segment.
+  - Inside code blocks (triple backticks) all markers are ignored.
+  - Inside a segment, `@path` imports a file and `!cmd` captures command
+    output.
+
+Full specification: https://github.com/lymslive/chatedit/blob/main/docs/chat-format.md
+
+==============================================================================
+9. CHANGELOG                                             *chatedit-changelog*
+
+1.0   Initial release.
+      - Async streaming :AI / :AR commands (Vim 8+ job API).
+      - Sync fallback for Vim 7.
+      - Insert-mode abbreviations for conversation headings.
+      - Normal-mode heading-level indent/unindent mappings.
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl:

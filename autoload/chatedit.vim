@@ -5,6 +5,8 @@
 "   chatedit#RunChat(line1, line2, mode)  -- async streaming chat call
 "   chatedit#HeadingIndent(direction)     -- adjust markdown heading level
 
+let g:chatedit_version = '1.0'
+
 " ---------------------------------------------------------------------------
 " Public: RunChat
 " ---------------------------------------------------------------------------
@@ -61,6 +63,8 @@ function! chatedit#RunChat(line1, line2, mode) abort
         if l:tmpfile !=# ''
             call delete(l:tmpfile)
         endif
+    else
+        echomsg l:cmd
     endif
 endfunction
 
